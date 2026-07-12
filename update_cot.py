@@ -4,10 +4,10 @@ import json
 from datetime import datetime, timedelta
 
 # You can get a free API key from Nasdaq Data Link (Quandl)
-API_KEY = 'YOUR_QUANDL_API_KEY'
+API_KEY = 'yGgfHiAWbn4QmWXduWCP'
 # CFTC Gold (Commodity Exchange Inc) - Futures Only
 # Code: CFTC/088691_F_L_ALL (Legacy) or choose Disaggregated
-URL = f"https://data.nasdaq.com/api/v3/datasets/CFTC/088691_F_ALL.json?api_key={yGgfHiAWbn4QmWXduWCP}"
+URL = f"https://data.nasdaq.com/api/v3/datasets/CFTC/088691_F_ALL.json?api_key={API_KEY}"
 
 def fetch_and_update_data():
     response = requests.get(URL)
