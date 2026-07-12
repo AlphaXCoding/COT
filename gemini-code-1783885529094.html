@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gold (XAUUSD) COT Data Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { background-color: #0f172a; color: #f8fafc; }
+    </style>
+</head>
+<body class="p-8">
+
+    <div class="max-w-5xl mx-auto">
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold text-yellow-500">Gold (XAUUSD) COT Tracker</h1>
+            <p class="text-slate-400 mt-2">Commitment of Traders - Non-Commercial Net Positions (Last 2 Years)</p>
+            <p class="text-sm text-slate-500 mt-1" id="last-updated">Last Updated: Loading...</p>
+        </header>
+
+        <div class="bg-slate-800 p-6 rounded-xl shadow-lg border border-slate-700">
+            <canvas id="cotChart" height="120"></canvas>
+        </div>
+    </div>
+
+    <script>
+        async function loadData() {
+            try {
+                const response = await fetch('cot_data.json');
+                const data = await response.json();
+                
+                document.getElementById('last-updated').innerText = `Last Updated: ${data.last_updated}`;
+
+                const ctx = document.getElementById('cotChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.dates,
+                        datasets: [{
+                            label: 'Net Non-Commercial Positions',
+                            data: data.net_positions,
+                            borderColor: '#eab308', // Tailwind Yellow 500
+                            backgroundColor: 'rgba(234, 179, 8, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.2,
+                            pointRadius: 1,
+                            pointHoverRadius: 5
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        interaction: { intersect: false, mode: 'index' },
+                        plugins: {
+                            legend: { labels: { color: '#f8fafc' } }
+                        },
+                        scales: {
+                            x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+                            y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error("Error loading COT data:", error);
+                document.getElementById('last-updated').innerText = "Error loading data. Check console.";
+            }
+        }
+        
+        loadData();
+    </script>
+</body>
+</html>
