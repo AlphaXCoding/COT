@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 API_KEY = 'YOUR_QUANDL_API_KEY'
 # CFTC Gold (Commodity Exchange Inc) - Futures Only
 # Code: CFTC/088691_F_L_ALL (Legacy) or choose Disaggregated
-URL = f"https://data.nasdaq.com/api/v3/datasets/CFTC/088691_F_ALL.json?api_key={API_KEY}"
+URL = f"https://data.nasdaq.com/api/v3/datasets/CFTC/088691_F_ALL.json?api_key={yGgfHiAWbn4QmWXduWCP}"
 
 def fetch_and_update_data():
     response = requests.get(URL)
