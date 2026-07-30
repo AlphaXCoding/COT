@@ -1,55 +1,130 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="antialiased">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Institutional Gold COT Dashboard</title>
+    <title>XAUUSD Institutional Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { background-color: #0b0f19; color: #f8fafc; font-family: 'Inter', sans-serif; }
-        .metric-card { background: #111827; border: 1px solid #1f2937; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #020617; /* Slate 950 */
+            color: #f8fafc; /* Slate 50 */
+        }
+        /* Custom scrollbar for a polished look */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
     </style>
 </head>
-<body class="p-6 md:p-10">
+<body class="min-h-screen selection:bg-yellow-500/30">
 
-    <div class="max-w-7xl mx-auto">
-        <header class="mb-8 flex justify-between items-end border-b border-gray-800 pb-4">
-            <div>
-                <h1 class="text-3xl font-bold text-yellow-500 tracking-tight">XAUUSD Smart Money Tracker</h1>
-                <p class="text-gray-400 mt-1">Commitment of Traders (COT) - Non-Commercial Positioning</p>
+    <!-- Top Navigation Bar -->
+    <nav class="border-b border-slate-800/60 bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <!-- Gold Coin SVG Icon -->
+                <div class="w-8 h-8 rounded-full bg-yellow-500/10 flex items-center justify-center border border-yellow-500/20">
+                    <svg class="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="8" stroke-width="2"></circle>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v8m-2-4h4"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent">
+                        XAUUSD Smart Money
+                    </h1>
+                </div>
             </div>
-            <div class="text-right">
-                <p class="text-xs text-gray-500 uppercase tracking-widest">Status</p>
-                <p class="text-sm text-green-400 font-mono" id="last-updated">LIVE • Loading...</p>
+            
+            <div class="flex items-center gap-3 bg-slate-950 px-4 py-1.5 rounded-full border border-slate-800">
+                <span class="relative flex h-2.5 w-2.5">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                </span>
+                <p class="text-xs font-medium text-slate-300 tracking-wide" id="last-updated">Connecting...</p>
             </div>
-        </header>
+        </div>
+    </nav>
 
-        <!-- Summary Metrics Ribbon -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8" id="metrics-ribbon">
-            <div class="metric-card p-5 rounded-lg shadow-lg">
-                <p class="text-sm text-gray-400">Current Net Position</p>
-                <p class="text-2xl font-bold text-white mt-1 font-mono" id="val-net">--</p>
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- Header Section -->
+        <div class="mb-8">
+            <h2 class="text-2xl font-semibold text-white tracking-tight">Institutional Positioning</h2>
+            <p class="text-sm text-slate-400 mt-1">CFTC Commitment of Traders (COT) - Non-Commercial Data</p>
+        </div>
+
+        <!-- Metrics Ribbon -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8" id="metrics-ribbon">
+            
+            <!-- Net Position Card -->
+            <div class="bg-slate-900/80 backdrop-blur border border-slate-800 rounded-2xl p-6 transition-all hover:border-slate-700 hover:shadow-lg hover:shadow-black/20">
+                <div class="flex justify-between items-start">
+                    <p class="text-sm font-medium text-slate-400">Current Net Position</p>
+                    <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"></path></svg>
+                </div>
+                <p class="text-3xl font-bold text-white mt-4 tracking-tight" id="val-net">--</p>
+                <p class="text-xs text-slate-500 mt-2">Total contracts</p>
             </div>
-            <div class="metric-card p-5 rounded-lg shadow-lg">
-                <p class="text-sm text-gray-400">Weekly Change (Net)</p>
-                <p class="text-2xl font-bold mt-1 font-mono" id="val-change">--</p>
+
+            <!-- Weekly Change Card -->
+            <div class="bg-slate-900/80 backdrop-blur border border-slate-800 rounded-2xl p-6 transition-all hover:border-slate-700 hover:shadow-lg hover:shadow-black/20">
+                <div class="flex justify-between items-start">
+                    <p class="text-sm font-medium text-slate-400">Weekly Change</p>
+                    <div id="change-icon-container">
+                        <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                    </div>
+                </div>
+                <div class="flex items-baseline gap-2 mt-4">
+                    <p class="text-3xl font-bold tracking-tight" id="val-change">--</p>
+                </div>
+                <p class="text-xs text-slate-500 mt-2">Vs. previous week</p>
             </div>
-            <div class="metric-card p-5 rounded-lg shadow-lg">
-                <p class="text-sm text-gray-400">Bullish Sentiment (Long %)</p>
-                <p class="text-2xl font-bold text-green-500 mt-1 font-mono" id="val-long-pct">--%</p>
+
+            <!-- Bullish Sentiment -->
+            <div class="bg-slate-900/80 backdrop-blur border border-slate-800 rounded-2xl p-6 relative overflow-hidden transition-all hover:border-slate-700 hover:shadow-lg hover:shadow-black/20">
+                <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent"></div>
+                <div class="relative">
+                    <div class="flex justify-between items-start">
+                        <p class="text-sm font-medium text-slate-400">Bullish Sentiment</p>
+                        <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>
+                    </div>
+                    <p class="text-3xl font-bold text-emerald-400 mt-4 tracking-tight" id="val-long-pct">--%</p>
+                    <p class="text-xs text-slate-500 mt-2">% of total positions (Long)</p>
+                </div>
             </div>
-            <div class="metric-card p-5 rounded-lg shadow-lg">
-                <p class="text-sm text-gray-400">Bearish Sentiment (Short %)</p>
-                <p class="text-2xl font-bold text-red-500 mt-1 font-mono" id="val-short-pct">--%</p>
+
+            <!-- Bearish Sentiment -->
+            <div class="bg-slate-900/80 backdrop-blur border border-slate-800 rounded-2xl p-6 relative overflow-hidden transition-all hover:border-slate-700 hover:shadow-lg hover:shadow-black/20">
+                <div class="absolute inset-0 bg-gradient-to-br from-rose-500/5 to-transparent"></div>
+                <div class="relative">
+                    <div class="flex justify-between items-start">
+                        <p class="text-sm font-medium text-slate-400">Bearish Sentiment</p>
+                        <svg class="w-5 h-5 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>
+                    </div>
+                    <p class="text-3xl font-bold text-rose-400 mt-4 tracking-tight" id="val-short-pct">--%</p>
+                    <p class="text-xs text-slate-500 mt-2">% of total positions (Short)</p>
+                </div>
             </div>
         </div>
 
         <!-- Main Chart Area -->
-        <div class="metric-card p-6 rounded-xl shadow-2xl relative">
-            <canvas id="cotChart" height="120"></canvas>
+        <div class="bg-slate-900/80 backdrop-blur border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl relative w-full">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-base font-semibold text-slate-200">2-Year Historical Positioning</h3>
+                <span class="px-3 py-1 bg-slate-800 text-slate-300 text-xs font-medium rounded-md border border-slate-700">Weekly Data</span>
+            </div>
+            
+            <div class="w-full" style="height: 450px;">
+                <canvas id="cotChart"></canvas>
+            </div>
         </div>
-    </div>
+    </main>
 
     <script>
         async function loadData() {
@@ -60,7 +135,7 @@
                     throw new Error("Preview Environment Detected: Cannot fetch local JSON files in this sandbox.");
                 }
 
-                // 2. Fetch live data (This works perfectly on your live GitHub Pages site)
+                // 2. Fetch live data
                 const requestPath = 'cot_data.json?v=' + new Date().getTime();
                 const response = await fetch(requestPath);
                 
@@ -68,10 +143,10 @@
                 data = await response.json();
                 
             } catch (error) {
-                console.warn("Using sample preview data. (You will see live data on your real GitHub URL).", error.message);
-                // 3. Fallback sample data so you can actually see the chart working in this preview window!
+                console.warn("Using sample preview data.", error.message);
+                // 3. Fallback sample data for preview
                 data = {
-                    last_updated: "Preview Sample Data (Live on GitHub)",
+                    last_updated: "Preview (Live on GitHub)",
                     dates: ["2026-06-16", "2026-06-23", "2026-06-30", "2026-07-07", "2026-07-14", "2026-07-21"],
                     net_positions: [180000, 185000, 195000, 210000, 205000, 225000],
                     longs: [255000, 260000, 270000, 285000, 280000, 295000],
@@ -82,26 +157,51 @@
             }
 
             try {
-                document.getElementById('last-updated').innerText = `LIVE • Updated: ${data.last_updated}`;
+                // Update Status
+                document.getElementById('last-updated').innerText = `Updated: ${data.last_updated}`;
 
-                // Populate Top Ribbon
+                // Calculate current values
                 const lastIdx = data.net_positions.length - 1;
                 const prevIdx = lastIdx - 1 > 0 ? lastIdx - 1 : 0;
                 
                 const currentNet = data.net_positions[lastIdx];
                 const weeklyChange = currentNet - data.net_positions[prevIdx];
                 
+                // Populate Ribbon
                 document.getElementById('val-net').innerText = currentNet.toLocaleString();
                 
                 const changeEl = document.getElementById('val-change');
-                changeEl.innerText = (weeklyChange > 0 ? "+" : "") + weeklyChange.toLocaleString();
-                changeEl.className = weeklyChange > 0 ? "text-2xl font-bold mt-1 font-mono text-green-500" : "text-2xl font-bold mt-1 font-mono text-red-500";
+                const changeIconContainer = document.getElementById('change-icon-container');
+                
+                const formattedChange = Math.abs(weeklyChange).toLocaleString();
+                
+                if (weeklyChange > 0) {
+                    changeEl.innerText = "+" + formattedChange;
+                    changeEl.className = "text-3xl font-bold tracking-tight text-emerald-400";
+                    changeIconContainer.innerHTML = `<svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>`;
+                } else if (weeklyChange < 0) {
+                    changeEl.innerText = "-" + formattedChange;
+                    changeEl.className = "text-3xl font-bold tracking-tight text-rose-400";
+                    changeIconContainer.innerHTML = `<svg class="w-5 h-5 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0v-8m0 8l-8-8-4 4-6-6"></path></svg>`;
+                } else {
+                    changeEl.innerText = "0";
+                    changeEl.className = "text-3xl font-bold tracking-tight text-slate-400";
+                }
                 
                 document.getElementById('val-long-pct').innerText = data.long_pct[lastIdx] + "%";
                 document.getElementById('val-short-pct').innerText = data.short_pct[lastIdx] + "%";
 
-                // Render Dual-Axis Chart
+                // Setup Chart.js
                 const ctx = document.getElementById('cotChart').getContext('2d');
+                
+                // Create gradient for Net Position line
+                const gradientFill = ctx.createLinearGradient(0, 0, 0, 400);
+                gradientFill.addColorStop(0, 'rgba(234, 179, 8, 0.25)'); // Yellow transparent
+                gradientFill.addColorStop(1, 'rgba(234, 179, 8, 0.0)');
+
+                Chart.defaults.font.family = "'Inter', sans-serif";
+                Chart.defaults.color = '#94a3b8'; // slate-400
+
                 new Chart(ctx, {
                     type: 'bar',
                     data: {
@@ -111,59 +211,123 @@
                                 type: 'line',
                                 label: 'Net Position',
                                 data: data.net_positions,
-                                borderColor: '#eab308',
-                                backgroundColor: '#eab308',
+                                borderColor: '#eab308', // Yellow-500
+                                backgroundColor: gradientFill,
                                 borderWidth: 3,
-                                tension: 0.3,
+                                fill: true,
+                                tension: 0.4, // Curved lines
                                 pointRadius: 0,
+                                pointHoverRadius: 6,
                                 yAxisID: 'y'
                             },
                             {
                                 type: 'bar',
-                                label: 'Longs',
+                                label: 'Long Contracts',
                                 data: data.longs,
-                                backgroundColor: 'rgba(34, 197, 94, 0.2)',
-                                borderColor: 'rgba(34, 197, 94, 0.8)',
+                                backgroundColor: 'rgba(16, 185, 129, 0.15)', // Emerald-500 transparent
+                                borderColor: 'rgba(16, 185, 129, 0.8)',
                                 borderWidth: 1,
+                                borderRadius: 4, // Rounded bars
+                                borderSkipped: false,
                                 yAxisID: 'y1'
                             },
                             {
                                 type: 'bar',
-                                label: 'Shorts',
+                                label: 'Short Contracts',
                                 data: data.shorts,
-                                backgroundColor: 'rgba(239, 68, 68, 0.2)',
-                                borderColor: 'rgba(239, 68, 68, 0.8)',
+                                backgroundColor: 'rgba(244, 63, 94, 0.15)', // Rose-500 transparent
+                                borderColor: 'rgba(244, 63, 94, 0.8)',
                                 borderWidth: 1,
+                                borderRadius: 4, // Rounded bars
+                                borderSkipped: false,
                                 yAxisID: 'y1'
                             }
                         ]
                     },
                     options: {
                         responsive: true,
-                        interaction: { mode: 'index', intersect: false },
+                        maintainAspectRatio: false,
+                        interaction: { 
+                            mode: 'index', 
+                            intersect: false 
+                        },
                         plugins: {
-                            legend: { labels: { color: '#9ca3af' } },
-                            tooltip: { backgroundColor: '#1f2937', titleColor: '#f3f4f6', bodyColor: '#d1d5db' }
+                            legend: { 
+                                position: 'top',
+                                align: 'end',
+                                labels: { 
+                                    usePointStyle: true,
+                                    boxWidth: 8,
+                                    padding: 20,
+                                    font: { weight: '500' }
+                                } 
+                            },
+                            tooltip: { 
+                                backgroundColor: 'rgba(15, 23, 42, 0.95)', // Slate 900
+                                titleColor: '#f8fafc',
+                                bodyColor: '#cbd5e1',
+                                borderColor: '#334155',
+                                borderWidth: 1,
+                                padding: 12,
+                                cornerRadius: 8,
+                                displayColors: true,
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        if (context.parsed.y !== null) {
+                                            label += new Intl.NumberFormat('en-US').format(context.parsed.y);
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
                         },
                         scales: {
-                            x: { grid: { color: '#1f2937' }, ticks: { color: '#6b7280' } },
+                            x: { 
+                                grid: { 
+                                    color: 'rgba(255, 255, 255, 0.05)',
+                                    drawBorder: false
+                                }, 
+                                ticks: { maxTicksLimit: 12 } 
+                            },
                             y: { 
-                                type: 'linear', display: true, position: 'left',
-                                grid: { color: '#1f2937' }, ticks: { color: '#eab308' },
-                                title: { display: true, text: 'Net Positions', color: '#eab308' }
+                                type: 'linear', 
+                                display: true, 
+                                position: 'left',
+                                grid: { 
+                                    color: 'rgba(255, 255, 255, 0.05)',
+                                    drawBorder: false
+                                }, 
+                                title: { 
+                                    display: true, 
+                                    text: 'Net Positions', 
+                                    color: '#eab308',
+                                    font: { weight: '600' }
+                                }
                             },
                             y1: { 
-                                type: 'linear', display: true, position: 'right',
-                                grid: { drawOnChartArea: false }, ticks: { color: '#6b7280' },
-                                title: { display: true, text: 'Total Contracts', color: '#6b7280' }
+                                type: 'linear', 
+                                display: true, 
+                                position: 'right',
+                                grid: { display: false }, 
+                                title: { 
+                                    display: true, 
+                                    text: 'Total Contracts', 
+                                    color: '#94a3b8',
+                                    font: { weight: '500' }
+                                }
                             }
                         }
                     }
                 });
             } catch (error) {
                 console.error("Error rendering COT data:", error);
-                document.getElementById('last-updated').innerText = "Error loading data - check console.";
-                document.getElementById('last-updated').classList.replace('text-green-400', 'text-red-500');
+                document.getElementById('last-updated').innerText = "Data Error";
+                document.getElementById('last-updated').parentElement.querySelector('.bg-emerald-400').classList.replace('bg-emerald-400', 'bg-rose-500');
+                document.getElementById('last-updated').parentElement.querySelector('.bg-emerald-500').classList.replace('bg-emerald-500', 'bg-rose-600');
             }
         }
         
