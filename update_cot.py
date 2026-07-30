@@ -77,10 +77,15 @@ def fetch_and_update_data():
             print("Error: DataFrame is empty after filtering dates. Check CFTC date formats.")
             exit(1)
 
-        # Use exact Futures-only Non-Commercial columns matching the official CFTC layout
-        long_col = next((col for col in df.columns if 'noncomm_positions_long' in col), None)
-        short_col = next((col for col in df.columns if 'noncomm_positions_short' in col), None)
+        # Dynamically find Non-Commercial columns matching both legacy and newer CFTC formats
+        long_col = next((col for col in df.columns if col.startswith('noncomm') and 'long' in col and 'all' in col), None)
+        short_col = next((col for col in df.columns if col.startswith('noncomm') and 'short' in col and 'all' in col), None)
         
+        # Fallback just in case 'all' is missing from the column name
+        if not long_col or not short_col:
+            long_col = next((col for col in df.columns if col.startswith('noncomm') and 'long' in col and 'old' not in col), None)
+            short_col = next((col for col in df.columns if col.startswith('noncomm') and 'short' in col and 'old' not in col), None)
+            
         if not long_col or not short_col:
             raise Exception(f"Could not locate Non-Commercial columns. Available columns: {list(df.columns)}")
 
