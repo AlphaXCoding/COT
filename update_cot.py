@@ -44,9 +44,9 @@ def fetch_and_update_data():
         df['Date'] = pd.to_datetime(df[date_col], errors='coerce')
         df = df.dropna(subset=['Date'])
         
-        # Filter for exactly the last 2 years
-        two_years_ago = datetime.now() - timedelta(days=730)
-        df = df[df['Date'] >= two_years_ago]
+        # Filter for exactly the last 5 months
+        five_months_ago = pd.Timestamp.now() - pd.DateOffset(months=5)
+        df = df[df['Date'] >= five_months_ago]
         
         long_col = next(col for col in df.columns if ('noncomm' in col or 'noncommercial' in col) and 'long' in col)
         short_col = next(col for col in df.columns if ('noncomm' in col or 'noncommercial' in col) and 'short' in col)
