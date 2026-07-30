@@ -3,23 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gold (XAUUSD) COT Data Tracker</title>
+    <title>Institutional Gold COT Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { background-color: #0f172a; color: #f8fafc; }
+        body { background-color: #0b0f19; color: #f8fafc; font-family: 'Inter', sans-serif; }
+        .metric-card { background: #111827; border: 1px solid #1f2937; }
     </style>
 </head>
-<body class="p-8">
+<body class="p-6 md:p-10">
 
-    <div class="max-w-5xl mx-auto">
-        <header class="mb-8">
-            <h1 class="text-3xl font-bold text-yellow-500">Gold (XAUUSD) COT Tracker</h1>
-            <p class="text-slate-400 mt-2">Commitment of Traders - Non-Commercial Net Positions (Last 2 Years)</p>
-            <p class="text-sm text-slate-500 mt-1" id="last-updated">Last Updated: Loading...</p>
+    <div class="max-w-7xl mx-auto">
+        <header class="mb-8 flex justify-between items-end border-b border-gray-800 pb-4">
+            <div>
+                <h1 class="text-3xl font-bold text-yellow-500 tracking-tight">XAUUSD Smart Money Tracker</h1>
+                <p class="text-gray-400 mt-1">Commitment of Traders (COT) - Non-Commercial Positioning</p>
+            </div>
+            <div class="text-right">
+                <p class="text-xs text-gray-500 uppercase tracking-widest">Status</p>
+                <p class="text-sm text-green-400 font-mono" id="last-updated">LIVE • Loading...</p>
+            </div>
         </header>
 
-        <div class="bg-slate-800 p-6 rounded-xl shadow-lg border border-slate-700">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8" id="metrics-ribbon">
+            <div class="metric-card p-5 rounded-lg shadow-lg">
+                <p class="text-sm text-gray-400">Current Net Position</p>
+                <p class="text-2xl font-bold text-white mt-1 font-mono" id="val-net">--</p>
+            </div>
+            <div class="metric-card p-5 rounded-lg shadow-lg">
+                <p class="text-sm text-gray-400">Weekly Change (Net)</p>
+                <p class="text-2xl font-bold mt-1 font-mono" id="val-change">--</p>
+            </div>
+            <div class="metric-card p-5 rounded-lg shadow-lg">
+                <p class="text-sm text-gray-400">Bullish Sentiment (Long %)</p>
+                <p class="text-2xl font-bold text-green-500 mt-1 font-mono" id="val-long-pct">--%</p>
+            </div>
+            <div class="metric-card p-5 rounded-lg shadow-lg">
+                <p class="text-sm text-gray-400">Bearish Sentiment (Short %)</p>
+                <p class="text-2xl font-bold text-red-500 mt-1 font-mono" id="val-short-pct">--%</p>
+            </div>
+        </div>
+
+        <div class="metric-card p-6 rounded-xl shadow-2xl relative">
             <canvas id="cotChart" height="120"></canvas>
         </div>
     </div>
@@ -30,40 +55,88 @@
                 const response = await fetch('cot_data.json');
                 const data = await response.json();
                 
-                document.getElementById('last-updated').innerText = `Last Updated: ${data.last_updated}`;
+                document.getElementById('last-updated').innerText = `LIVE • Updated: ${data.last_updated}`;
 
+                // Populate Top Ribbon
+                const lastIdx = data.net_positions.length - 1;
+                const prevIdx = lastIdx - 1;
+                
+                const currentNet = data.net_positions[lastIdx];
+                const weeklyChange = currentNet - data.net_positions[prevIdx];
+                
+                document.getElementById('val-net').innerText = currentNet.toLocaleString();
+                
+                const changeEl = document.getElementById('val-change');
+                changeEl.innerText = (weeklyChange > 0 ? "+" : "") + weeklyChange.toLocaleString();
+                changeEl.className = weeklyChange > 0 ? "text-2xl font-bold mt-1 font-mono text-green-500" : "text-2xl font-bold mt-1 font-mono text-red-500";
+                
+                document.getElementById('val-long-pct').innerText = data.long_pct[lastIdx] + "%";
+                document.getElementById('val-short-pct').innerText = data.short_pct[lastIdx] + "%";
+
+                // Render Dual-Axis Chart
                 const ctx = document.getElementById('cotChart').getContext('2d');
                 new Chart(ctx, {
-                    type: 'line',
+                    type: 'bar',
                     data: {
                         labels: data.dates,
-                        datasets: [{
-                            label: 'Net Non-Commercial Positions',
-                            data: data.net_positions,
-                            borderColor: '#eab308', // Tailwind Yellow 500
-                            backgroundColor: 'rgba(234, 179, 8, 0.1)',
-                            borderWidth: 2,
-                            fill: true,
-                            tension: 0.2,
-                            pointRadius: 1,
-                            pointHoverRadius: 5
-                        }]
+                        datasets: [
+                            {
+                                type: 'line',
+                                label: 'Net Position',
+                                data: data.net_positions,
+                                borderColor: '#eab308',
+                                backgroundColor: '#eab308',
+                                borderWidth: 3,
+                                tension: 0.3,
+                                pointRadius: 0,
+                                yAxisID: 'y'
+                            },
+                            {
+                                type: 'bar',
+                                label: 'Longs',
+                                data: data.longs,
+                                backgroundColor: 'rgba(34, 197, 94, 0.2)',
+                                borderColor: 'rgba(34, 197, 94, 0.8)',
+                                borderWidth: 1,
+                                yAxisID: 'y1'
+                            },
+                            {
+                                type: 'bar',
+                                label: 'Shorts',
+                                data: data.shorts,
+                                backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                                borderColor: 'rgba(239, 68, 68, 0.8)',
+                                borderWidth: 1,
+                                yAxisID: 'y1'
+                            }
+                        ]
                     },
                     options: {
                         responsive: true,
-                        interaction: { intersect: false, mode: 'index' },
+                        interaction: { mode: 'index', intersect: false },
                         plugins: {
-                            legend: { labels: { color: '#f8fafc' } }
+                            legend: { labels: { color: '#9ca3af' } },
+                            tooltip: { backgroundColor: '#1f2937', titleColor: '#f3f4f6', bodyColor: '#d1d5db' }
                         },
                         scales: {
-                            x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
-                            y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }
+                            x: { grid: { color: '#1f2937' }, ticks: { color: '#6b7280' } },
+                            y: { 
+                                type: 'linear', display: true, position: 'left',
+                                grid: { color: '#1f2937' }, ticks: { color: '#eab308' },
+                                title: { display: true, text: 'Net Positions', color: '#eab308' }
+                            },
+                            y1: { 
+                                type: 'linear', display: true, position: 'right',
+                                grid: { drawOnChartArea: false }, ticks: { color: '#6b7280' },
+                                title: { display: true, text: 'Total Contracts', color: '#6b7280' }
+                            }
                         }
                     }
                 });
             } catch (error) {
                 console.error("Error loading COT data:", error);
-                document.getElementById('last-updated').innerText = "Error loading data. Check console.";
+                document.getElementById('last-updated').innerText = "Error loading data - check console.";
+                document.getElementById('last-updated').classList.replace('text-green-400', 'text-red-500');
             }
         }
         
