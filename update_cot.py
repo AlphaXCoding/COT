@@ -46,15 +46,19 @@ def fetch_and_update_data():
             print("Error: No data was downloaded.")
             exit(1)
 
-        # Make columns lowercase to prevent CFTC capitalization changes
-        df.columns = [col.lower().strip() for col in df.columns]
+        # FIX: Standardize columns to lowercase AND replace spaces with underscores
+        df.columns = [col.lower().strip().replace(' ', '_') for col in df.columns]
+        
+        # DYNAMIC FINDER: Finds the correct columns even if the CFTC changes their names slightly
+        market_col = next((col for col in df.columns if 'market_and_exchange' in col), df.columns[0])
+        date_col = next(col for col in df.columns if 'report_date' in col or 'as_of_date' in col)
         
         # Filter specifically for Gold (XAUUSD) 
-        df = df[df['market_and_exchange_names'].str.contains('GOLD', case=False, na=False)]
-        df = df[df['market_and_exchange_names'].str.contains('COMMODITY EXCHANGE', case=False, na=False)]
+        df = df[df[market_col].str.contains('GOLD', case=False, na=False)]
+        df = df[df[market_col].str.contains('COMMODITY EXCHANGE', case=False, na=False)]
         
         # Standardize the date column
-        df['Date'] = pd.to_datetime(df['report_date_as_mm_dd_yyyy'])
+        df['Date'] = pd.to_datetime(df[date_col])
         
         # Filter for exactly the last 2 years
         two_years_ago = datetime.now() - timedelta(days=730)
