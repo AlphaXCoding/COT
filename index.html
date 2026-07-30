@@ -10,10 +10,9 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #020617; /* Slate 950 */
-            color: #f8fafc; /* Slate 50 */
+            background-color: #020617;
+            color: #f8fafc;
         }
-        /* Custom scrollbar for a polished look */
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #0f172a; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
@@ -26,7 +25,6 @@
     <nav class="border-b border-slate-800/60 bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
             <div class="flex items-center gap-3">
-                <!-- Gold Coin SVG Icon -->
                 <div class="w-8 h-8 rounded-full bg-yellow-500/10 flex items-center justify-center border border-yellow-500/20">
                     <svg class="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <circle cx="12" cy="12" r="8" stroke-width="2"></circle>
@@ -56,13 +54,12 @@
         <!-- Header Section -->
         <div class="mb-8">
             <h2 class="text-2xl font-semibold text-white tracking-tight">Institutional Positioning</h2>
-            <p class="text-sm text-slate-400 mt-1">CFTC Commitment of Traders (COT) - Non-Commercial Data</p>
+            <p class="text-sm text-slate-400 mt-1">CFTC Commitment of Traders (COT) - Non-Commercial Data (Last 5 Months)</p>
         </div>
 
         <!-- Metrics Ribbon -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8" id="metrics-ribbon">
             
-            <!-- Net Position Card -->
             <div class="bg-slate-900/80 backdrop-blur border border-slate-800 rounded-2xl p-6 transition-all hover:border-slate-700 hover:shadow-lg hover:shadow-black/20">
                 <div class="flex justify-between items-start">
                     <p class="text-sm font-medium text-slate-400">Current Net Position</p>
@@ -72,7 +69,6 @@
                 <p class="text-xs text-slate-500 mt-2">Total contracts</p>
             </div>
 
-            <!-- Weekly Change Card -->
             <div class="bg-slate-900/80 backdrop-blur border border-slate-800 rounded-2xl p-6 transition-all hover:border-slate-700 hover:shadow-lg hover:shadow-black/20">
                 <div class="flex justify-between items-start">
                     <p class="text-sm font-medium text-slate-400">Weekly Change</p>
@@ -86,7 +82,6 @@
                 <p class="text-xs text-slate-500 mt-2">Vs. previous week</p>
             </div>
 
-            <!-- Bullish Sentiment -->
             <div class="bg-slate-900/80 backdrop-blur border border-slate-800 rounded-2xl p-6 relative overflow-hidden transition-all hover:border-slate-700 hover:shadow-lg hover:shadow-black/20">
                 <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent"></div>
                 <div class="relative">
@@ -99,7 +94,6 @@
                 </div>
             </div>
 
-            <!-- Bearish Sentiment -->
             <div class="bg-slate-900/80 backdrop-blur border border-slate-800 rounded-2xl p-6 relative overflow-hidden transition-all hover:border-slate-700 hover:shadow-lg hover:shadow-black/20">
                 <div class="absolute inset-0 bg-gradient-to-br from-rose-500/5 to-transparent"></div>
                 <div class="relative">
@@ -116,7 +110,7 @@
         <!-- Main Chart Area -->
         <div class="bg-slate-900/80 backdrop-blur border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl relative w-full">
             <div class="flex justify-between items-center mb-6">
-                <h3 class="text-base font-semibold text-slate-200">2-Year Historical Positioning</h3>
+                <h3 class="text-base font-semibold text-slate-200">5-Month Historical Positioning</h3>
                 <span class="px-3 py-1 bg-slate-800 text-slate-300 text-xs font-medium rounded-md border border-slate-700">Weekly Data</span>
             </div>
             
@@ -130,12 +124,10 @@
         async function loadData() {
             let data;
             try {
-                // 1. Prevent the preview environment (Blob URL) from crashing the fetch request
                 if (window.location.protocol === 'blob:' || window.location.hostname === '') {
-                    throw new Error("Preview Environment Detected: Cannot fetch local JSON files in this sandbox.");
+                    throw new Error("Preview Environment Detected.");
                 }
 
-                // 2. Fetch live data
                 const requestPath = 'cot_data.json?v=' + new Date().getTime();
                 const response = await fetch(requestPath);
                 
@@ -144,35 +136,30 @@
                 
             } catch (error) {
                 console.warn("Using sample preview data.", error.message);
-                // 3. Fallback sample data for preview
                 data = {
                     last_updated: "Preview (Live on GitHub)",
-                    dates: ["2026-06-16", "2026-06-23", "2026-06-30", "2026-07-07", "2026-07-14", "2026-07-21"],
-                    net_positions: [180000, 185000, 195000, 210000, 205000, 225000],
-                    longs: [255000, 260000, 270000, 285000, 280000, 295000],
-                    shorts: [75000, 75000, 75000, 75000, 75000, 70000],
-                    long_pct: [77.2, 77.6, 78.2, 79.1, 78.8, 80.8],
-                    short_pct: [22.8, 22.4, 21.8, 20.9, 21.2, 19.2]
+                    dates: ["2026-03-01", "2026-03-15", "2026-04-01", "2026-04-15", "2026-05-01", "2026-05-15", "2026-06-01", "2026-06-15", "2026-07-01", "2026-07-21"],
+                    net_positions: [150000, 155000, 162000, 170000, 175000, 180000, 185000, 195000, 210000, 225000],
+                    longs: [220000, 225000, 230000, 240000, 245000, 255000, 260000, 270000, 285000, 295000],
+                    shorts: [70000, 70000, 68000, 70000, 70000, 75000, 75000, 75000, 75000, 70000],
+                    long_pct: [75.8, 76.2, 77.1, 77.4, 77.7, 77.2, 77.6, 78.2, 79.1, 80.8],
+                    short_pct: [24.2, 23.8, 22.9, 22.6, 22.3, 22.8, 22.4, 21.8, 20.9, 19.2]
                 };
             }
 
             try {
-                // Update Status
                 document.getElementById('last-updated').innerText = `Updated: ${data.last_updated}`;
 
-                // Calculate current values
                 const lastIdx = data.net_positions.length - 1;
                 const prevIdx = lastIdx - 1 > 0 ? lastIdx - 1 : 0;
                 
                 const currentNet = data.net_positions[lastIdx];
                 const weeklyChange = currentNet - data.net_positions[prevIdx];
                 
-                // Populate Ribbon
                 document.getElementById('val-net').innerText = currentNet.toLocaleString();
                 
                 const changeEl = document.getElementById('val-change');
                 const changeIconContainer = document.getElementById('change-icon-container');
-                
                 const formattedChange = Math.abs(weeklyChange).toLocaleString();
                 
                 if (weeklyChange > 0) {
@@ -191,16 +178,13 @@
                 document.getElementById('val-long-pct').innerText = data.long_pct[lastIdx] + "%";
                 document.getElementById('val-short-pct').innerText = data.short_pct[lastIdx] + "%";
 
-                // Setup Chart.js
                 const ctx = document.getElementById('cotChart').getContext('2d');
-                
-                // Create gradient for Net Position line
                 const gradientFill = ctx.createLinearGradient(0, 0, 0, 400);
-                gradientFill.addColorStop(0, 'rgba(234, 179, 8, 0.25)'); // Yellow transparent
+                gradientFill.addColorStop(0, 'rgba(234, 179, 8, 0.25)');
                 gradientFill.addColorStop(1, 'rgba(234, 179, 8, 0.0)');
 
                 Chart.defaults.font.family = "'Inter', sans-serif";
-                Chart.defaults.color = '#94a3b8'; // slate-400
+                Chart.defaults.color = '#94a3b8';
 
                 new Chart(ctx, {
                     type: 'bar',
@@ -211,12 +195,12 @@
                                 type: 'line',
                                 label: 'Net Position',
                                 data: data.net_positions,
-                                borderColor: '#eab308', // Yellow-500
+                                borderColor: '#eab308',
                                 backgroundColor: gradientFill,
                                 borderWidth: 3,
                                 fill: true,
-                                tension: 0.4, // Curved lines
-                                pointRadius: 0,
+                                tension: 0.4,
+                                pointRadius: 2,
                                 pointHoverRadius: 6,
                                 yAxisID: 'y'
                             },
@@ -224,10 +208,10 @@
                                 type: 'bar',
                                 label: 'Long Contracts',
                                 data: data.longs,
-                                backgroundColor: 'rgba(16, 185, 129, 0.15)', // Emerald-500 transparent
+                                backgroundColor: 'rgba(16, 185, 129, 0.15)',
                                 borderColor: 'rgba(16, 185, 129, 0.8)',
                                 borderWidth: 1,
-                                borderRadius: 4, // Rounded bars
+                                borderRadius: 4,
                                 borderSkipped: false,
                                 yAxisID: 'y1'
                             },
@@ -235,10 +219,10 @@
                                 type: 'bar',
                                 label: 'Short Contracts',
                                 data: data.shorts,
-                                backgroundColor: 'rgba(244, 63, 94, 0.15)', // Rose-500 transparent
+                                backgroundColor: 'rgba(244, 63, 94, 0.15)',
                                 borderColor: 'rgba(244, 63, 94, 0.8)',
                                 borderWidth: 1,
-                                borderRadius: 4, // Rounded bars
+                                borderRadius: 4,
                                 borderSkipped: false,
                                 yAxisID: 'y1'
                             }
@@ -247,36 +231,21 @@
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
-                        interaction: { 
-                            mode: 'index', 
-                            intersect: false 
-                        },
+                        interaction: { mode: 'index', intersect: false },
                         plugins: {
                             legend: { 
-                                position: 'top',
-                                align: 'end',
-                                labels: { 
-                                    usePointStyle: true,
-                                    boxWidth: 8,
-                                    padding: 20,
-                                    font: { weight: '500' }
-                                } 
+                                position: 'top', align: 'end',
+                                labels: { usePointStyle: true, boxWidth: 8, padding: 20, font: { weight: '500' } } 
                             },
                             tooltip: { 
-                                backgroundColor: 'rgba(15, 23, 42, 0.95)', // Slate 900
-                                titleColor: '#f8fafc',
-                                bodyColor: '#cbd5e1',
-                                borderColor: '#334155',
-                                borderWidth: 1,
-                                padding: 12,
-                                cornerRadius: 8,
-                                displayColors: true,
+                                backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                                titleColor: '#f8fafc', bodyColor: '#cbd5e1',
+                                borderColor: '#334155', borderWidth: 1,
+                                padding: 12, cornerRadius: 8, displayColors: true,
                                 callbacks: {
                                     label: function(context) {
                                         let label = context.dataset.label || '';
-                                        if (label) {
-                                            label += ': ';
-                                        }
+                                        if (label) { label += ': '; }
                                         if (context.parsed.y !== null) {
                                             label += new Intl.NumberFormat('en-US').format(context.parsed.y);
                                         }
@@ -287,38 +256,18 @@
                         },
                         scales: {
                             x: { 
-                                grid: { 
-                                    color: 'rgba(255, 255, 255, 0.05)',
-                                    drawBorder: false
-                                }, 
+                                grid: { color: 'rgba(255, 255, 255, 0.05)', drawBorder: false }, 
                                 ticks: { maxTicksLimit: 12 } 
                             },
                             y: { 
-                                type: 'linear', 
-                                display: true, 
-                                position: 'left',
-                                grid: { 
-                                    color: 'rgba(255, 255, 255, 0.05)',
-                                    drawBorder: false
-                                }, 
-                                title: { 
-                                    display: true, 
-                                    text: 'Net Positions', 
-                                    color: '#eab308',
-                                    font: { weight: '600' }
-                                }
+                                type: 'linear', display: true, position: 'left',
+                                grid: { color: 'rgba(255, 255, 255, 0.05)', drawBorder: false }, 
+                                title: { display: true, text: 'Net Positions', color: '#eab308', font: { weight: '600' } }
                             },
                             y1: { 
-                                type: 'linear', 
-                                display: true, 
-                                position: 'right',
+                                type: 'linear', display: true, position: 'right',
                                 grid: { display: false }, 
-                                title: { 
-                                    display: true, 
-                                    text: 'Total Contracts', 
-                                    color: '#94a3b8',
-                                    font: { weight: '500' }
-                                }
+                                title: { display: true, text: 'Total Contracts', color: '#94a3b8', font: { weight: '500' } }
                             }
                         }
                     }
@@ -326,8 +275,6 @@
             } catch (error) {
                 console.error("Error rendering COT data:", error);
                 document.getElementById('last-updated').innerText = "Data Error";
-                document.getElementById('last-updated').parentElement.querySelector('.bg-emerald-400').classList.replace('bg-emerald-400', 'bg-rose-500');
-                document.getElementById('last-updated').parentElement.querySelector('.bg-emerald-500').classList.replace('bg-emerald-500', 'bg-rose-600');
             }
         }
         
