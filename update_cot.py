@@ -3,14 +3,22 @@ import requests
 import json
 from datetime import datetime, timedelta
 
-# IMPORTANT: Paste your real Nasdaq Data Link API key inside the quotes below
+# 1. IMPORTANT: Paste your real Nasdaq Data Link API key inside the quotes below
 API_KEY = 'yGgfHiAWbn4QmWXduWCP'
-URL = f"https://data.nasdaq.com/api/v3/datasets/CFTC/088691_F_ALL.json?api_key={API_KEY}"
+
+# 2. FIXED URL: Added the missing _L_ for the Legacy Gold Dataset
+URL = f"https://data.nasdaq.com/api/v3/datasets/CFTC/088691_F_L_ALL.json?api_key={API_KEY}"
 
 def fetch_and_update_data():
     try:
+        print("Connecting to Nasdaq Data Link...")
         response = requests.get(URL)
-        response.raise_for_status()
+        
+        # This will print the exact error in your GitHub logs if it fails again
+        if response.status_code != 200:
+            print(f"API Error {response.status_code}: {response.text}")
+            exit(1)
+            
         data = response.json()
         
         dataset = data['dataset']
