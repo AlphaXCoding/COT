@@ -4,7 +4,7 @@ import json
 from datetime import datetime, timedelta
 
 # IMPORTANT: Paste your real Nasdaq Data Link API key inside the quotes below
-API_KEY = 'YOUR_QUANDL_API_KEY'
+API_KEY = 'yGgfHiAWbn4QmWXduWCP'
 URL = f"https://data.nasdaq.com/api/v3/datasets/CFTC/088691_F_ALL.json?api_key={API_KEY}"
 
 def fetch_and_update_data():
