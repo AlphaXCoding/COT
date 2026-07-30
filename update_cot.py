@@ -36,9 +36,8 @@ def fetch_and_update_data():
         market_col = next((col for col in df.columns if 'market_and_exchange' in col), df.columns[0])
         date_col = next(col for col in df.columns if 'report_date' in col or 'as_of_date' in col)
         
-        # Filter for Gold
+        # Filter for Gold (Removed 'COMMODITY' strict filter to prevent accidental data loss)
         df = df[df[market_col].astype(str).str.contains('GOLD', case=False, na=False)]
-        df = df[df[market_col].astype(str).str.contains('COMMODITY', case=False, na=False)]
         
         # THE 1970 FIX: Safely parse dates and immediately DROP any broken/invalid dates
         df['Date'] = pd.to_datetime(df[date_col], errors='coerce')
@@ -60,8 +59,8 @@ def fetch_and_update_data():
         # Sort chronologically so the newest data is at the very bottom
         df = df.sort_values(by='Date', ascending=True)
         
-        # Filter for exactly the last 5 months
-        five_months_ago = pd.Timestamp.now() - pd.DateOffset(months=5)
+        # Filter for exactly the last 5 months (~150 days) using strict timedelta
+        five_months_ago = datetime.now() - timedelta(days=150)
         filtered_df = df[df['Date'] >= five_months_ago]
         
         # THE SAFETY NET: If the filter above fails, grab the last 22 weeks (~5 months) manually
