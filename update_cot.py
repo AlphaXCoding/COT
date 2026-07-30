@@ -5,7 +5,6 @@ from zipfile import ZipFile
 import json
 from datetime import datetime, timedelta
 
-# Ditching Nasdaq - Direct Government CFTC Download
 def get_cftc_data(year):
     print(f"Downloading official US Government CFTC data for {year}...")
     url = f"https://www.cftc.gov/files/dea/history/deacot{year}.zip"
@@ -27,63 +26,62 @@ def fetch_and_update_data():
         current_year = datetime.now().year
         prev_year = current_year - 1
         
-        # Combine this year and last year
         df = pd.concat([get_cftc_data(current_year), get_cftc_data(prev_year)], ignore_index=True)
         
-        # Standardize columns
-        df.columns = [col.lower().strip().replace(' ', '_') for col in df.columns]
+        # Standardize columns to lowercase with underscores
+        df.columns = [col.lower().strip().replace(' ', '_').replace('-', '_') for col in df.columns]
         
+        # Find market and date columns dynamically
         market_col = next((col for col in df.columns if 'market_and_exchange' in col), df.columns[0])
-        date_col = next(col for col in df.columns if 'report_date' in col or 'as_of_date' in col)
         
-        # Filter for Gold (Removed 'COMMODITY' strict filter to prevent accidental data loss)
+        # Look for any column containing 'report_date' or 'as_of_date'
+        date_col = next((col for col in df.columns if 'report_date' in col or 'as_of_date' in col or 'date' in col), None)
+        if not date_col:
+            raise Exception("Could not locate the date column in the CFTC dataset.")
+
+        # Filter specifically for Gold
         df = df[df[market_col].astype(str).str.contains('GOLD', case=False, na=False)]
         
-        # THE 1970 FIX: Safely parse dates and immediately DROP any broken/invalid dates
+        # FIX: Explicitly handle different government date formats to avoid 1970 bug
         df['Date'] = pd.to_datetime(df[date_col], errors='coerce')
         df = df.dropna(subset=['Date'])
         
+        # Find Long and Short columns dynamically
         long_col = next(col for col in df.columns if ('noncomm' in col or 'noncommercial' in col) and 'long' in col)
         short_col = next(col for col in df.columns if ('noncomm' in col or 'noncommercial' in col) and 'short' in col)
         
-        # Ensure numbers are clean
         df['Noncommercial Long'] = pd.to_numeric(df[long_col].astype(str).str.replace(',', ''), errors='coerce').fillna(0)
         df['Noncommercial Short'] = pd.to_numeric(df[short_col].astype(str).str.replace(',', ''), errors='coerce').fillna(0)
         
-        # THE ZIGZAG FIX: Combine multiple gold contracts on the same day into one smooth number
+        # Group duplicates on the same date
         df = df.groupby('Date').agg({
             'Noncommercial Long': 'sum',
             'Noncommercial Short': 'sum'
         }).reset_index()
         
-        # Sort chronologically so the newest data is at the very bottom
+        # Sort chronologically
         df = df.sort_values(by='Date', ascending=True)
         
-        # Filter for exactly the last 5 months (~150 days) using strict timedelta
+        # Filter strictly for the last 5 months (~150 days)
         five_months_ago = datetime.now() - timedelta(days=150)
         filtered_df = df[df['Date'] >= five_months_ago]
         
-        # THE SAFETY NET: If the filter above fails, grab the last 22 weeks (~5 months) manually
         if filtered_df.empty or len(filtered_df) < 2:
-            print("Date filter returned empty. Using fallback 22 weeks.")
             df = df.tail(22)
         else:
             df = filtered_df
             
-        # Final safety check to prevent writing a completely empty JSON
         if df.empty:
-            print("Error: DataFrame is completely empty. Exiting to prevent website crash.")
+            print("Error: DataFrame is empty after filtering.")
             exit(1)
         
-        # Advanced Calculations
+        # Calculations
         df['Net_NonComm'] = df['Noncommercial Long'] - df['Noncommercial Short']
         df['Total_Positions'] = df['Noncommercial Long'] + df['Noncommercial Short']
         
-        # Sentiment Ratios
         df['Long_Pct'] = (df['Noncommercial Long'] / df['Total_Positions'] * 100).fillna(0).round(1)
         df['Short_Pct'] = (df['Noncommercial Short'] / df['Total_Positions'] * 100).fillna(0).round(1)
         
-        # Format for the frontend
         export_data = {
             "dates": df['Date'].dt.strftime('%Y-%m-%d').tolist(),
             "net_positions": df['Net_NonComm'].tolist(),
@@ -96,7 +94,7 @@ def fetch_and_update_data():
         
         with open('cot_data.json', 'w') as f:
             json.dump(export_data, f)
-        print("Cleaned and grouped COT data successfully exported!")
+        print("COT data successfully cleaned, parsed, and exported!")
         
     except Exception as e:
         print(f"Error processing data: {e}")
