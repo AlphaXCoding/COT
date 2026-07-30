@@ -88,6 +88,7 @@
                 if (!response.ok) throw new Error("Network response failed");
                 data = await response.json();
             } catch (error) {
+                console.warn("Failed to load JSON, using preview fallback data.");
                 data = {
                     last_updated: "Preview (Live on GitHub)",
                     dates: ["2026-06-01", "2026-06-09", "2026-06-16", "2026-06-23", "2026-06-30", "2026-07-07", "2026-07-14", "2026-07-21"],
@@ -100,6 +101,15 @@
             }
 
             document.getElementById('last-updated').innerText = `Updated: ${data.last_updated}`;
+            
+            // --- SAFETY CHECK (Prevents crashes if JSON is empty) ---
+            if (!data.net_positions || data.net_positions.length === 0) {
+                console.warn("Data arrays are empty. Awaiting fresh Python script output.");
+                document.getElementById('val-net').innerText = "Awaiting Data";
+                return; // Stop execution safely so the chart doesn't crash the page
+            }
+            // --------------------------------------------------------
+
             const lastIdx = data.net_positions.length - 1;
             const prevIdx = lastIdx - 1 > 0 ? lastIdx - 1 : 0;
             const currentNet = data.net_positions[lastIdx];
