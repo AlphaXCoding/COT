@@ -37,21 +37,28 @@ def fetch_and_update_data():
         df.columns = [col.lower().strip().replace(' ', '_') for col in df.columns]
         
         market_col = next((col for col in df.columns if 'market' in col or 'exchange' in col), df.columns[0])
-        date_col = next((col for col in df.columns if 'date' in col), df.columns[1])
         
-        # Filter strictly for Gold COMEX Futures
-        gold_df = df[df[market_col].astype(str).str.contains('GOLD', case=False, na=False)]
-        strict_df = gold_df[gold_df[market_col].astype(str).str.contains('COMMODITY EXCHANGE INC', case=False, na=False)]
+        # DYNAMIC DATE FIX: Explicitly target the formatted date column, not the raw YYMMDD integer column
+        date_col = next((col for col in df.columns if 'yyyy_mm_dd' in col or 'mm_dd_yyyy' in col), None)
+        if not date_col:
+            date_col = next((col for col in df.columns if 'date' in col), df.columns[1])
+        
+        # Filter strictly for Gold COMEX Futures and COPY to avoid SettingWithCopyWarning
+        gold_df = df[df[market_col].astype(str).str.contains('GOLD', case=False, na=False)].copy()
+        strict_df = gold_df[gold_df[market_col].astype(str).str.contains('COMMODITY EXCHANGE INC', case=False, na=False)].copy()
         
         if not strict_df.empty:
-            df = strict_df
+            df = strict_df.copy()
         else:
             # Fallback filter if specific exchange name string differs slightly
-            df = gold_df
+            df = gold_df.copy()
 
         if df.empty:
             print("Error: Gold market rows could not be isolated.")
             exit(1)
+
+        print(f"Detected Market Column: {market_col}")
+        print(f"Detected Date Column: {date_col}")
 
         # Parse dates robustly
         df['Date'] = pd.to_datetime(df[date_col], errors='coerce')
@@ -61,7 +68,7 @@ def fetch_and_update_data():
         df = df[(df['Date'] >= '2025-01-01') & (df['Date'] <= datetime.now())]
         
         if df.empty:
-            print("Error: DataFrame is empty after filtering dates.")
+            print("Error: DataFrame is empty after filtering dates. Check CFTC date formats.")
             exit(1)
 
         # Use exact Futures-only Non-Commercial columns matching the official CFTC layout
