@@ -13,7 +13,7 @@ except ImportError:
     import nasdaqdatalink
 
 # 1. IMPORTANT: Paste your real Nasdaq Data Link API key inside the quotes below
-API_KEY = 'hhx2X3bRFW8BYMDPft6S'
+API_KEY = 'ZzXt6ZZjPFzRGoA771Kv'
 
 def fetch_and_update_data():
     try:
