@@ -67,9 +67,13 @@ def fetch_and_update_data():
         # Sort chronologically for the chart
         df = df.sort_values(by='Date', ascending=True)
         
-        # Ensure the positions are numbers
-        df['Noncommercial Long'] = pd.to_numeric(df['noncomm_positions_long_all'])
-        df['Noncommercial Short'] = pd.to_numeric(df['noncomm_positions_short_all'])
+        # DYNAMIC FINDER: Finds the Long and Short columns regardless of how the CFTC spells them
+        long_col = next(col for col in df.columns if ('noncomm' in col or 'noncommercial' in col) and 'long' in col)
+        short_col = next(col for col in df.columns if ('noncomm' in col or 'noncommercial' in col) and 'short' in col)
+        
+        # Ensure the positions are numbers (also cleans out any accidental commas from the government data)
+        df['Noncommercial Long'] = pd.to_numeric(df[long_col].astype(str).str.replace(',', ''), errors='coerce').fillna(0)
+        df['Noncommercial Short'] = pd.to_numeric(df[short_col].astype(str).str.replace(',', ''), errors='coerce').fillna(0)
         
         # Advanced Calculations
         df['Net_NonComm'] = df['Noncommercial Long'] - df['Noncommercial Short']
