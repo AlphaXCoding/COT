@@ -37,9 +37,12 @@ def fetch_and_update_data():
         # Filter specifically for Gold
         df = df[df[market_col].astype(str).str.contains('GOLD', case=False, na=False)]
         
-        # Parse dates robustly
+        # Parse dates safely
         df['Date'] = pd.to_datetime(df[date_col], errors='coerce')
         df = df.dropna(subset=['Date'])
+        
+        # Filter strictly for current/recent years to eliminate index/date corruption
+        df = df[df['Date'] >= '2025-01-01']
         
         long_col = next(col for col in df.columns if ('noncomm' in col or 'noncommercial' in col) and 'long' in col)
         short_col = next(col for col in df.columns if ('noncomm' in col or 'noncommercial' in col) and 'short' in col)
@@ -56,11 +59,11 @@ def fetch_and_update_data():
         # Sort chronologically
         df = df.sort_values(by='Date', ascending=True)
         
-        # Take the last 22 weeks (~5 months) cleanly without throwing empty dataframe errors
+        # Take the last 22 records safely
         df = df.tail(22)
         
         if df.empty:
-            print("Error: DataFrame is empty.")
+            print("Error: Filtered DataFrame is empty.")
             exit(1)
         
         # Calculations
