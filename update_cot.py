@@ -44,10 +44,6 @@ def fetch_and_update_data():
         df['Date'] = pd.to_datetime(df[date_col], errors='coerce')
         df = df.dropna(subset=['Date'])
         
-        # Filter for exactly the last 5 months
-        five_months_ago = pd.Timestamp.now() - pd.DateOffset(months=5)
-        df = df[df['Date'] >= five_months_ago]
-        
         long_col = next(col for col in df.columns if ('noncomm' in col or 'noncommercial' in col) and 'long' in col)
         short_col = next(col for col in df.columns if ('noncomm' in col or 'noncommercial' in col) and 'short' in col)
         
@@ -61,8 +57,24 @@ def fetch_and_update_data():
             'Noncommercial Short': 'sum'
         }).reset_index()
         
-        # Sort chronologically
+        # Sort chronologically so the newest data is at the very bottom
         df = df.sort_values(by='Date', ascending=True)
+        
+        # Filter for exactly the last 5 months
+        five_months_ago = pd.Timestamp.now() - pd.DateOffset(months=5)
+        filtered_df = df[df['Date'] >= five_months_ago]
+        
+        # THE SAFETY NET: If the filter above fails, grab the last 22 weeks (~5 months) manually
+        if filtered_df.empty or len(filtered_df) < 2:
+            print("Date filter returned empty. Using fallback 22 weeks.")
+            df = df.tail(22)
+        else:
+            df = filtered_df
+            
+        # Final safety check to prevent writing a completely empty JSON
+        if df.empty:
+            print("Error: DataFrame is completely empty. Exiting to prevent website crash.")
+            exit(1)
         
         # Advanced Calculations
         df['Net_NonComm'] = df['Noncommercial Long'] - df['Noncommercial Short']
