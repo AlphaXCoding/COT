@@ -30,35 +30,39 @@ def fetch_and_update_data():
             df = get_cftc_data(year - 1)
 
         if df.empty:
-            print("Error: Could not retrieve COT data.")
+            print("Error: Could not retrieve COT data zip archive.")
             exit(1)
 
-        # Standardize columns
+        # Standardize columns to lowercase
         df.columns = [col.lower().strip().replace(' ', '_') for col in df.columns]
         
-        market_col = next((col for col in df.columns if 'market_and_exchange_names' in col or 'market' in col), df.columns[0])
-        date_col = next((col for col in df.columns if 'report_date_as_yyyy_mm_dd' in col or 'date' in col), df.columns[1])
+        # Dynamically detect columns to prevent isolation errors
+        market_col = next((col for col in df.columns if 'market' in col or 'exchange' in col), df.columns[0])
+        date_col = next((col for col in df.columns if 'date' in col), df.columns[1])
         
-        # Filter strictly for Gold COMEX contracts
+        print(f"Detected Market Column: {market_col}")
+        print(f"Detected Date Column: {date_col}")
+
+        # Filter strictly for Gold contracts
         df = df[df[market_col].astype(str).str.contains('GOLD', case=False, na=False)]
-        df = df[df[market_col].astype(str).str.contains('COMEX', case=False, na=False)]
         
         if df.empty:
-            print("Error: Gold COMEX market rows could not be isolated.")
+            print("Error: Gold market rows could not be isolated.")
             exit(1)
 
-        # Parse dates robustly and strip invalid/future timeline shifts
+        # Parse dates robustly
         df['Date'] = pd.to_datetime(df[date_col], errors='coerce')
         df = df.dropna(subset=['Date'])
         
-        # Keep only valid real calendar dates up to today
+        # Keep valid recent calendar dates
         df = df[(df['Date'] >= '2025-01-01') & (df['Date'] <= datetime.now())]
 
-        long_col = next((col for col in df.columns if 'noncomm_positions_long' in col), None)
-        short_col = next((col for col in df.columns if 'noncomm_positions_short' in col), None)
+        # Dynamically find Non-Commercial columns
+        long_col = next((col for col in df.columns if 'noncomm' in col and 'long' in col), None)
+        short_col = next((col for col in df.columns if 'noncomm' in col and 'short' in col), None)
         
         if not long_col or not short_col:
-            raise Exception("Could not locate Non-Commercial long/short columns.")
+            raise Exception(f"Could not locate Non-Commercial columns. Available columns: {list(df.columns)}")
 
         df['Noncommercial Long'] = pd.to_numeric(df[long_col].astype(str).str.replace(',', ''), errors='coerce').fillna(0)
         df['Noncommercial Short'] = pd.to_numeric(df[short_col].astype(str).str.replace(',', ''), errors='coerce').fillna(0)
