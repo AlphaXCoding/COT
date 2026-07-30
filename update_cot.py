@@ -28,30 +28,22 @@ def fetch_and_update_data():
         
         df = pd.concat([get_cftc_data(current_year), get_cftc_data(prev_year)], ignore_index=True)
         
-        # Standardize columns to lowercase with underscores
+        # Standardize columns
         df.columns = [col.lower().strip().replace(' ', '_').replace('-', '_') for col in df.columns]
         
-        # Find market column dynamically
         market_col = next((col for col in df.columns if 'market_and_exchange' in col), df.columns[0])
-        
-        # Look for date column and ensure proper parsing to eliminate 1970 epoch bug
         date_col = next((col for col in df.columns if 'report_date' in col or 'as_of_date' in col or 'date' in col), None)
-        if not date_col:
-            raise Exception("Could not locate the date column in the CFTC dataset.")
 
         # Filter specifically for Gold
         df = df[df[market_col].astype(str).str.contains('GOLD', case=False, na=False)]
         
-        # Parse dates robustly and drop NaTs immediately
+        # Strict parsing to ensure valid 2025/2026 dates only
         df['Date'] = pd.to_datetime(df[date_col], errors='coerce')
         df = df.dropna(subset=['Date'])
         
-        # If dates are stored as string formats or mixed, handle them explicitly
-        if df['Date'].dt.year.min() < 2000:
-            df['Date'] = pd.to_datetime(df[date_col].astype(str).str[:10], errors='coerce')
-            df = df.dropna(subset=['Date'])
-
-        # Find Long and Short columns dynamically
+        # Drop any accidental future dates or old 1970 errors
+        df = df[(df['Date'] >= '2025-01-01') & (df['Date'] <= datetime.now())]
+        
         long_col = next(col for col in df.columns if ('noncomm' in col or 'noncommercial' in col) and 'long' in col)
         short_col = next(col for col in df.columns if ('noncomm' in col or 'noncommercial' in col) and 'short' in col)
         
@@ -67,17 +59,12 @@ def fetch_and_update_data():
         # Sort chronologically
         df = df.sort_values(by='Date', ascending=True)
         
-        # Filter strictly for the last 5 months (~150 days)
+        # Keep strictly the last 5 months
         five_months_ago = datetime.now() - timedelta(days=150)
-        filtered_df = df[df['Date'] >= five_months_ago]
+        df = df[df['Date'] >= five_months_ago]
         
-        if filtered_df.empty or len(filtered_df) < 2:
-            df = df.tail(22)
-        else:
-            df = filtered_df
-            
         if df.empty:
-            print("Error: DataFrame is empty after filtering.")
+            print("Error: Filtered dataframe is empty.")
             exit(1)
         
         # Calculations
@@ -99,7 +86,7 @@ def fetch_and_update_data():
         
         with open('cot_data.json', 'w') as f:
             json.dump(export_data, f)
-        print("COT data successfully cleaned, parsed, and exported!")
+        print("Cleaned 5-month COT data successfully exported!")
         
     except Exception as e:
         print(f"Error processing data: {e}")
