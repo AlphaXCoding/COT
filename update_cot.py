@@ -5,28 +5,32 @@ from zipfile import ZipFile
 import json
 from datetime import datetime
 
+def get_cftc_data(year):
+    print(f"Downloading official US Government CFTC data for {year}...")
+    url = f"https://www.cftc.gov/files/dea/history/deacot{year}.zip"
+    headers = {'User-Agent': 'Mozilla/5.0'}
+    
+    response = requests.get(url, headers=headers)
+    if response.status_code != 200:
+        return pd.DataFrame()
+        
+    zip_file = ZipFile(BytesIO(response.content))
+    for filename in zip_file.namelist():
+        if filename.endswith('.txt') or filename.endswith('.csv'):
+            return pd.read_csv(zip_file.open(filename), low_memory=False)
+            
+    return pd.DataFrame()
+
 def fetch_and_update_data():
     try:
         year = datetime.now().year
-        url = f"https://www.cftc.gov/files/dea/history/deacot{year}.zip"
+        df = get_cftc_data(year)
         
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        response = requests.get(url, headers=headers)
-        
-        if response.status_code != 200:
-            print(f"Failed to download data. Status: {response.status_code}")
-            exit(1)
-            
-        zip_file = ZipFile(BytesIO(response.content))
-        df = pd.DataFrame()
-        
-        for filename in zip_file.namelist():
-            if filename.endswith('.txt') or filename.endswith('.csv'):
-                df = pd.read_csv(zip_file.open(filename), low_memory=False)
-                break
-                
         if df.empty:
-            print("Error: Empty archive.")
+            df = get_cftc_data(year - 1)
+
+        if df.empty:
+            print("Error: Could not retrieve COT data.")
             exit(1)
 
         # Standardize columns
@@ -35,19 +39,21 @@ def fetch_and_update_data():
         market_col = next((col for col in df.columns if 'market_and_exchange_names' in col or 'market' in col), df.columns[0])
         date_col = next((col for col in df.columns if 'report_date_as_yyyy_mm_dd' in col or 'date' in col), df.columns[1])
         
-        # Filter for Gold (COMEX)
+        # Filter strictly for Gold COMEX contracts
         df = df[df[market_col].astype(str).str.contains('GOLD', case=False, na=False)]
         df = df[df[market_col].astype(str).str.contains('COMEX', case=False, na=False)]
         
         if df.empty:
-            print("Error: Could not isolate Gold COMEX contract.")
+            print("Error: Gold COMEX market rows could not be isolated.")
             exit(1)
 
-        # Parse dates accurately
+        # Parse dates robustly and strip invalid/future timeline shifts
         df['Date'] = pd.to_datetime(df[date_col], errors='coerce')
         df = df.dropna(subset=['Date'])
         
-        # Correct CFTC legacy non-commercial columns
+        # Keep only valid real calendar dates up to today
+        df = df[(df['Date'] >= '2025-01-01') & (df['Date'] <= datetime.now())]
+
         long_col = next((col for col in df.columns if 'noncomm_positions_long' in col), None)
         short_col = next((col for col in df.columns if 'noncomm_positions_short' in col), None)
         
@@ -57,7 +63,7 @@ def fetch_and_update_data():
         df['Noncommercial Long'] = pd.to_numeric(df[long_col].astype(str).str.replace(',', ''), errors='coerce').fillna(0)
         df['Noncommercial Short'] = pd.to_numeric(df[short_col].astype(str).str.replace(',', ''), errors='coerce').fillna(0)
         
-        # Group and sort
+        # Group duplicates on the same date and sort chronologically
         df = df.groupby('Date').agg({
             'Noncommercial Long': 'sum',
             'Noncommercial Short': 'sum'
@@ -65,6 +71,7 @@ def fetch_and_update_data():
         
         df = df.sort_values(by='Date', ascending=True).tail(22)
         
+        # Calculations
         df['Net_NonComm'] = df['Noncommercial Long'] - df['Noncommercial Short']
         df['Total_Positions'] = df['Noncommercial Long'] + df['Noncommercial Short']
         df['Long_Pct'] = (df['Noncommercial Long'] / df['Total_Positions'] * 100).fillna(0).round(1)
@@ -83,10 +90,10 @@ def fetch_and_update_data():
         with open('cot_data.json', 'w') as f:
             json.dump(export_data, f)
             
-        print("Accurate Gold COT data successfully exported!")
+        print("Cleaned 5-Month Gold COT data successfully exported!")
         
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error processing script: {e}")
         exit(1)
 
 if __name__ == "__main__":
