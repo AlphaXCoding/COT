@@ -7,15 +7,14 @@ from datetime import datetime
 
 def fetch_and_update_data():
     try:
-        # Use the exact URL format for CFTC legacy reports (e.g., 2026)
         year = datetime.now().year
         url = f"https://www.cftc.gov/files/dea/history/deacot{year}.zip"
         
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+        headers = {'User-Agent': 'Mozilla/5.0'}
         response = requests.get(url, headers=headers)
         
         if response.status_code != 200:
-            print(f"Failed to download data for {year}. Status: {response.status_code}")
+            print(f"Failed to download data. Status: {response.status_code}")
             exit(1)
             
         zip_file = ZipFile(BytesIO(response.content))
@@ -27,52 +26,45 @@ def fetch_and_update_data():
                 break
                 
         if df.empty:
-            print("Error: No valid file found inside the zip archive.")
+            print("Error: Empty archive.")
             exit(1)
 
-        # Standardize column names to lowercase and strip whitespace
+        # Standardize columns
         df.columns = [col.lower().strip().replace(' ', '_') for col in df.columns]
         
-        # Identify key columns safely based on CFTC legacy layout headers
-        market_col = next((col for col in df.columns if 'market_and_exchange' in col), df.columns[0])
-        date_col = next((col for col in df.columns if 'report_date' in col or 'as_of_date' in col), df.columns[1])
+        market_col = next((col for col in df.columns if 'market_and_exchange_names' in col or 'market' in col), df.columns[0])
+        date_col = next((col for col in df.columns if 'report_date_as_yyyy_mm_dd' in col or 'date' in col), df.columns[1])
         
-        # Filter strictly for Gold on COMEX (Commodity Exchange Inc.)
+        # Filter for Gold (COMEX)
         df = df[df[market_col].astype(str).str.contains('GOLD', case=False, na=False)]
-        df = df[df[market_col].astype(str).str.contains('COMMODITY', case=False, na=False)]
+        df = df[df[market_col].astype(str).str.contains('COMEX', case=False, na=False)]
         
         if df.empty:
-            print("Error: Gold market rows could not be isolated.")
+            print("Error: Could not isolate Gold COMEX contract.")
             exit(1)
 
-        # Clean dates properly
+        # Parse dates accurately
         df['Date'] = pd.to_datetime(df[date_col], errors='coerce')
         df = df.dropna(subset=['Date'])
         
-        # Extract Non-Commercial (Speculator) columns from legacy format
-        # In CFTC legacy reports: noncomm_positions_long_all & noncomm_positions_short_all
-        long_col = next((col for col in df.columns if 'noncomm' in col and 'long' in col), None)
-        short_col = next((col for col in df.columns if 'noncomm' in col and 'short' in col), None)
+        # Correct CFTC legacy non-commercial columns
+        long_col = next((col for col in df.columns if 'noncomm_positions_long' in col), None)
+        short_col = next((col for col in df.columns if 'noncomm_positions_short' in col), None)
         
         if not long_col or not short_col:
-            raise Exception("Could not find Non-Commercial position columns in the CFTC file.")
+            raise Exception("Could not locate Non-Commercial long/short columns.")
 
         df['Noncommercial Long'] = pd.to_numeric(df[long_col].astype(str).str.replace(',', ''), errors='coerce').fillna(0)
         df['Noncommercial Short'] = pd.to_numeric(df[short_col].astype(str).str.replace(',', ''), errors='coerce').fillna(0)
         
-        # Group by date to combine any duplicates
+        # Group and sort
         df = df.groupby('Date').agg({
             'Noncommercial Long': 'sum',
             'Noncommercial Short': 'sum'
         }).reset_index()
         
-        # Sort chronologically
-        df = df.sort_values(by='Date', ascending=True)
+        df = df.sort_values(by='Date', ascending=True).tail(22)
         
-        # Take the most recent 22 weeks (~5 months)
-        df = df.tail(22)
-        
-        # Calculate metrics
         df['Net_NonComm'] = df['Noncommercial Long'] - df['Noncommercial Short']
         df['Total_Positions'] = df['Noncommercial Long'] + df['Noncommercial Short']
         df['Long_Pct'] = (df['Noncommercial Long'] / df['Total_Positions'] * 100).fillna(0).round(1)
@@ -91,10 +83,10 @@ def fetch_and_update_data():
         with open('cot_data.json', 'w') as f:
             json.dump(export_data, f)
             
-        print("COT data successfully parsed and exported!")
+        print("Accurate Gold COT data successfully exported!")
         
     except Exception as e:
-        print(f"Error processing script: {e}")
+        print(f"Error: {e}")
         exit(1)
 
 if __name__ == "__main__":
