@@ -22,8 +22,8 @@ def fetch_and_update_data():
         # Authenticate with the official SDK to bypass Incapsula WAF
         nasdaqdatalink.ApiConfig.api_key = API_KEY
         
-        # Fetch data directly into a pandas dataframe automatically!
-        df = nasdaqdatalink.get("CFTC/088691_F_L_ALL")
+        # FIXED: Reverted back to the standard free dataset code (Removed the _L_)
+        df = nasdaqdatalink.get("CFTC/088691_F_ALL")
         
         # The API returns Date as the index. Move it to a standard column.
         df = df.reset_index()
