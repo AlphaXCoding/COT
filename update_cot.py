@@ -1,39 +1,71 @@
 import pandas as pd
+import requests
+from io import BytesIO
+from zipfile import ZipFile
 import json
-import subprocess
-import sys
 from datetime import datetime, timedelta
 
-# Auto-install official Nasdaq package to bypass the firewall
-try:
-    import nasdaqdatalink
-except ImportError:
-    print("Installing official Nasdaq Data Link library...")
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "nasdaq-data-link"])
-    import nasdaqdatalink
+# WE ARE DITCHING NASDAQ!
+# No more API Keys. No more Firewalls.
+# We will download the data directly from the official US Government CFTC servers.
 
-# 1. IMPORTANT: Paste your real Nasdaq Data Link API key inside the quotes below
-API_KEY = 'ZzXt6ZZjPFzRGoA771Kv'
+def get_cftc_data(year):
+    print(f"Downloading official US Government CFTC data for {year}...")
+    url = f"https://www.cftc.gov/files/dea/history/deacot{year}.zip"
+    
+    # Use a browser header so the government site doesn't block the request
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+    response = requests.get(url, headers=headers)
+    
+    if response.status_code != 200:
+        print(f"Failed to download {year} data. Status: {response.status_code}")
+        return pd.DataFrame()
+        
+    zip_file = ZipFile(BytesIO(response.content))
+    
+    # Read the data directly from the zip file in memory
+    for filename in zip_file.namelist():
+        if filename.endswith('.txt') or filename.endswith('.csv'):
+            return pd.read_csv(zip_file.open(filename), low_memory=False)
+            
+    return pd.DataFrame()
 
 def fetch_and_update_data():
     try:
-        print("Connecting to Nasdaq Data Link via Official SDK...")
+        current_year = datetime.now().year
+        prev_year = current_year - 1
         
-        # Authenticate with the official SDK to bypass Incapsula WAF
-        nasdaqdatalink.ApiConfig.api_key = API_KEY
+        # Fetch this year and last year directly from the CFTC
+        df_current = get_cftc_data(current_year)
+        df_prev = get_cftc_data(prev_year)
         
-        # FIXED: Reverted back to the standard free dataset code (Removed the _L_)
-        df = nasdaqdatalink.get("CFTC/088691_F_ALL")
+        # Combine them
+        df = pd.concat([df_current, df_prev], ignore_index=True)
         
-        # The API returns Date as the index. Move it to a standard column.
-        df = df.reset_index()
+        if df.empty:
+            print("Error: No data was downloaded.")
+            exit(1)
+
+        # Make columns lowercase to prevent CFTC capitalization changes
+        df.columns = [col.lower().strip() for col in df.columns]
         
-        # Filter for the last 2 years
+        # Filter specifically for Gold (XAUUSD) 
+        df = df[df['market_and_exchange_names'].str.contains('GOLD', case=False, na=False)]
+        df = df[df['market_and_exchange_names'].str.contains('COMMODITY EXCHANGE', case=False, na=False)]
+        
+        # Standardize the date column
+        df['Date'] = pd.to_datetime(df['report_date_as_mm_dd_yyyy'])
+        
+        # Filter for exactly the last 2 years
         two_years_ago = datetime.now() - timedelta(days=730)
         df = df[df['Date'] >= two_years_ago]
         
-        # Sort by date ascending for the chart
+        # Sort chronologically for the chart
         df = df.sort_values(by='Date', ascending=True)
+        
+        # Ensure the positions are numbers
+        df['Noncommercial Long'] = pd.to_numeric(df['noncomm_positions_long_all'])
+        df['Noncommercial Short'] = pd.to_numeric(df['noncomm_positions_short_all'])
         
         # Advanced Calculations
         df['Net_NonComm'] = df['Noncommercial Long'] - df['Noncommercial Short']
@@ -56,10 +88,10 @@ def fetch_and_update_data():
         
         with open('cot_data.json', 'w') as f:
             json.dump(export_data, f)
-        print("Premium COT data updated successfully!")
+        print("US Government CFTC data downloaded and formatted successfully!")
         
     except Exception as e:
-        print(f"Error fetching data: {e}")
+        print(f"Error processing data: {e}")
         exit(1)
 
 if __name__ == "__main__":
