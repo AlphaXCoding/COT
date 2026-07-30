@@ -61,7 +61,13 @@ def fetch_and_update_data():
         print(f"Detected Date Column: {date_col}")
 
         # Parse dates robustly
-        df['Date'] = pd.to_datetime(df[date_col], errors='coerce')
+        if 'yymmdd' in date_col:
+            # Handle CFTC YYMMDD integer date format (e.g., 260721 -> 2026-07-21)
+            date_str = df[date_col].astype(str).str.replace(r'\.0$', '', regex=True).str.zfill(6)
+            df['Date'] = pd.to_datetime(date_str, format='%y%m%d', errors='coerce')
+        else:
+            df['Date'] = pd.to_datetime(df[date_col], errors='coerce')
+            
         df = df.dropna(subset=['Date'])
         
         # Keep valid recent calendar dates
