@@ -54,8 +54,13 @@ def fetch_and_update_data():
         date_col = next(col for col in df.columns if 'report_date' in col or 'as_of_date' in col)
         
         # Filter specifically for Gold (XAUUSD) 
+        # FIX: The CFTC officially abbreviates "Exchange" to "EXCH". We search for "COMMODITY" instead.
         df = df[df[market_col].str.contains('GOLD', case=False, na=False)]
-        df = df[df[market_col].str.contains('COMMODITY EXCHANGE', case=False, na=False)]
+        df = df[df[market_col].str.contains('COMMODITY', case=False, na=False)]
+        
+        if df.empty:
+            print("Error: Filtered out all data! Could not find Gold.")
+            exit(1)
         
         # Standardize the date column
         df['Date'] = pd.to_datetime(df[date_col])
