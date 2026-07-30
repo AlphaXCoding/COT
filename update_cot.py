@@ -31,10 +31,10 @@ def fetch_and_update_data():
         # Standardize columns to lowercase with underscores
         df.columns = [col.lower().strip().replace(' ', '_').replace('-', '_') for col in df.columns]
         
-        # Find market and date columns dynamically
+        # Find market column dynamically
         market_col = next((col for col in df.columns if 'market_and_exchange' in col), df.columns[0])
         
-        # Look for any column containing 'report_date' or 'as_of_date'
+        # Look for date column and ensure proper parsing to eliminate 1970 epoch bug
         date_col = next((col for col in df.columns if 'report_date' in col or 'as_of_date' in col or 'date' in col), None)
         if not date_col:
             raise Exception("Could not locate the date column in the CFTC dataset.")
@@ -42,10 +42,15 @@ def fetch_and_update_data():
         # Filter specifically for Gold
         df = df[df[market_col].astype(str).str.contains('GOLD', case=False, na=False)]
         
-        # FIX: Explicitly handle different government date formats to avoid 1970 bug
+        # Parse dates robustly and drop NaTs immediately
         df['Date'] = pd.to_datetime(df[date_col], errors='coerce')
         df = df.dropna(subset=['Date'])
         
+        # If dates are stored as string formats or mixed, handle them explicitly
+        if df['Date'].dt.year.min() < 2000:
+            df['Date'] = pd.to_datetime(df[date_col].astype(str).str[:10], errors='coerce')
+            df = df.dropna(subset=['Date'])
+
         # Find Long and Short columns dynamically
         long_col = next(col for col in df.columns if ('noncomm' in col or 'noncommercial' in col) and 'long' in col)
         short_col = next(col for col in df.columns if ('noncomm' in col or 'noncommercial' in col) and 'short' in col)
