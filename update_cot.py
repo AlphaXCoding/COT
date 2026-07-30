@@ -36,16 +36,19 @@ def fetch_and_update_data():
         # Standardize columns to lowercase
         df.columns = [col.lower().strip().replace(' ', '_') for col in df.columns]
         
-        # Dynamically detect columns to prevent isolation errors
         market_col = next((col for col in df.columns if 'market' in col or 'exchange' in col), df.columns[0])
         date_col = next((col for col in df.columns if 'date' in col), df.columns[1])
         
-        print(f"Detected Market Column: {market_col}")
-        print(f"Detected Date Column: {date_col}")
-
-        # Filter strictly for Gold contracts
-        df = df[df[market_col].astype(str).str.contains('GOLD', case=False, na=False)]
+        # Filter strictly for Gold COMEX Futures
+        gold_df = df[df[market_col].astype(str).str.contains('GOLD', case=False, na=False)]
+        strict_df = gold_df[gold_df[market_col].astype(str).str.contains('COMMODITY EXCHANGE INC', case=False, na=False)]
         
+        if not strict_df.empty:
+            df = strict_df
+        else:
+            # Fallback filter if specific exchange name string differs slightly
+            df = gold_df
+
         if df.empty:
             print("Error: Gold market rows could not be isolated.")
             exit(1)
@@ -56,10 +59,14 @@ def fetch_and_update_data():
         
         # Keep valid recent calendar dates
         df = df[(df['Date'] >= '2025-01-01') & (df['Date'] <= datetime.now())]
+        
+        if df.empty:
+            print("Error: DataFrame is empty after filtering dates.")
+            exit(1)
 
-        # Dynamically find Non-Commercial columns
-        long_col = next((col for col in df.columns if 'noncomm' in col and 'long' in col), None)
-        short_col = next((col for col in df.columns if 'noncomm' in col and 'short' in col), None)
+        # Use exact Futures-only Non-Commercial columns matching the official CFTC layout
+        long_col = next((col for col in df.columns if 'noncomm_positions_long' in col), None)
+        short_col = next((col for col in df.columns if 'noncomm_positions_short' in col), None)
         
         if not long_col or not short_col:
             raise Exception(f"Could not locate Non-Commercial columns. Available columns: {list(df.columns)}")
