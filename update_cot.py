@@ -5,25 +5,17 @@ from zipfile import ZipFile
 import json
 from datetime import datetime, timedelta
 
-# WE ARE DITCHING NASDAQ!
-# No more API Keys. No more Firewalls.
-# We will download the data directly from the official US Government CFTC servers.
-
+# Ditching Nasdaq - Direct Government CFTC Download
 def get_cftc_data(year):
     print(f"Downloading official US Government CFTC data for {year}...")
     url = f"https://www.cftc.gov/files/dea/history/deacot{year}.zip"
-    
-    # Use a browser header so the government site doesn't block the request
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
-    response = requests.get(url, headers=headers)
     
+    response = requests.get(url, headers=headers)
     if response.status_code != 200:
-        print(f"Failed to download {year} data. Status: {response.status_code}")
         return pd.DataFrame()
         
     zip_file = ZipFile(BytesIO(response.content))
-    
-    # Read the data directly from the zip file in memory
     for filename in zip_file.namelist():
         if filename.endswith('.txt') or filename.endswith('.csv'):
             return pd.read_csv(zip_file.open(filename), low_memory=False)
@@ -35,63 +27,48 @@ def fetch_and_update_data():
         current_year = datetime.now().year
         prev_year = current_year - 1
         
-        # Fetch this year and last year directly from the CFTC
-        df_current = get_cftc_data(current_year)
-        df_prev = get_cftc_data(prev_year)
+        # Combine this year and last year
+        df = pd.concat([get_cftc_data(current_year), get_cftc_data(prev_year)], ignore_index=True)
         
-        # Combine them
-        df = pd.concat([df_current, df_prev], ignore_index=True)
-        
-        if df.empty:
-            print("Error: No data was downloaded.")
-            exit(1)
-
-        # FIX: Standardize columns to lowercase AND replace spaces with underscores
+        # Standardize columns
         df.columns = [col.lower().strip().replace(' ', '_') for col in df.columns]
         
-        # DYNAMIC FINDER: Finds the correct columns even if the CFTC changes their names slightly
         market_col = next((col for col in df.columns if 'market_and_exchange' in col), df.columns[0])
         date_col = next(col for col in df.columns if 'report_date' in col or 'as_of_date' in col)
         
-        # Filter specifically for Gold (XAUUSD) 
-        # FIX: The CFTC officially abbreviates "Exchange" to "EXCH". We search for "COMMODITY" instead.
-        df = df[df[market_col].str.contains('GOLD', case=False, na=False)]
-        df = df[df[market_col].str.contains('COMMODITY', case=False, na=False)]
+        # Filter for Gold
+        df = df[df[market_col].astype(str).str.contains('GOLD', case=False, na=False)]
+        df = df[df[market_col].astype(str).str.contains('COMMODITY', case=False, na=False)]
         
-        if df.empty:
-            print("Error: Filtered out all data! Could not find Gold.")
-            exit(1)
-        
-        # BULLETPROOF DATE FIX: Handle weird government date formats safely
+        # THE 1970 FIX: Safely parse dates and immediately DROP any broken/invalid dates
         df['Date'] = pd.to_datetime(df[date_col], errors='coerce')
-        
-        # Sort chronologically so the newest data is at the bottom
-        df = df.sort_values(by='Date', ascending=True)
+        df = df.dropna(subset=['Date'])
         
         # Filter for exactly the last 2 years
         two_years_ago = datetime.now() - timedelta(days=730)
-        filtered_df = df[df['Date'] >= two_years_ago]
+        df = df[df['Date'] >= two_years_ago]
         
-        # SAFETY NET: If the government changed their date format and the filter failed, just take the last 104 weeks manually
-        if filtered_df.empty or len(filtered_df) < 10:
-            print("Date filter failed due to CFTC format changes. Using fallback 104 weeks.")
-            df = df.tail(104)
-        else:
-            df = filtered_df
-        
-        # DYNAMIC FINDER: Finds the Long and Short columns regardless of how the CFTC spells them
         long_col = next(col for col in df.columns if ('noncomm' in col or 'noncommercial' in col) and 'long' in col)
         short_col = next(col for col in df.columns if ('noncomm' in col or 'noncommercial' in col) and 'short' in col)
         
-        # Ensure the positions are numbers (also cleans out any accidental commas from the government data)
+        # Ensure numbers are clean
         df['Noncommercial Long'] = pd.to_numeric(df[long_col].astype(str).str.replace(',', ''), errors='coerce').fillna(0)
         df['Noncommercial Short'] = pd.to_numeric(df[short_col].astype(str).str.replace(',', ''), errors='coerce').fillna(0)
+        
+        # THE ZIGZAG FIX: Combine multiple gold contracts on the same day into one smooth number
+        df = df.groupby('Date').agg({
+            'Noncommercial Long': 'sum',
+            'Noncommercial Short': 'sum'
+        }).reset_index()
+        
+        # Sort chronologically
+        df = df.sort_values(by='Date', ascending=True)
         
         # Advanced Calculations
         df['Net_NonComm'] = df['Noncommercial Long'] - df['Noncommercial Short']
         df['Total_Positions'] = df['Noncommercial Long'] + df['Noncommercial Short']
         
-        # Sentiment Ratios (Prevent division by zero)
+        # Sentiment Ratios
         df['Long_Pct'] = (df['Noncommercial Long'] / df['Total_Positions'] * 100).fillna(0).round(1)
         df['Short_Pct'] = (df['Noncommercial Short'] / df['Total_Positions'] * 100).fillna(0).round(1)
         
@@ -108,7 +85,7 @@ def fetch_and_update_data():
         
         with open('cot_data.json', 'w') as f:
             json.dump(export_data, f)
-        print("US Government CFTC data downloaded and formatted successfully!")
+        print("Cleaned and grouped COT data successfully exported!")
         
     except Exception as e:
         print(f"Error processing data: {e}")
