@@ -62,15 +62,22 @@ def fetch_and_update_data():
             print("Error: Filtered out all data! Could not find Gold.")
             exit(1)
         
-        # Standardize the date column
-        df['Date'] = pd.to_datetime(df[date_col])
+        # BULLETPROOF DATE FIX: Handle weird government date formats safely
+        df['Date'] = pd.to_datetime(df[date_col], errors='coerce')
+        
+        # Sort chronologically so the newest data is at the bottom
+        df = df.sort_values(by='Date', ascending=True)
         
         # Filter for exactly the last 2 years
         two_years_ago = datetime.now() - timedelta(days=730)
-        df = df[df['Date'] >= two_years_ago]
+        filtered_df = df[df['Date'] >= two_years_ago]
         
-        # Sort chronologically for the chart
-        df = df.sort_values(by='Date', ascending=True)
+        # SAFETY NET: If the government changed their date format and the filter failed, just take the last 104 weeks manually
+        if filtered_df.empty or len(filtered_df) < 10:
+            print("Date filter failed due to CFTC format changes. Using fallback 104 weeks.")
+            df = df.tail(104)
+        else:
+            df = filtered_df
         
         # DYNAMIC FINDER: Finds the Long and Short columns regardless of how the CFTC spells them
         long_col = next(col for col in df.columns if ('noncomm' in col or 'noncommercial' in col) and 'long' in col)
