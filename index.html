@@ -25,6 +25,7 @@
             </div>
         </header>
 
+        <!-- Summary Metrics Ribbon -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8" id="metrics-ribbon">
             <div class="metric-card p-5 rounded-lg shadow-lg">
                 <p class="text-sm text-gray-400">Current Net Position</p>
@@ -44,6 +45,7 @@
             </div>
         </div>
 
+        <!-- Main Chart Area -->
         <div class="metric-card p-6 rounded-xl shadow-2xl relative">
             <canvas id="cotChart" height="120"></canvas>
         </div>
@@ -51,15 +53,40 @@
 
     <script>
         async function loadData() {
+            let data;
             try {
-                const response = await fetch('cot_data.json');
-                const data = await response.json();
+                // 1. Prevent the preview environment (Blob URL) from crashing the fetch request
+                if (window.location.protocol === 'blob:' || window.location.hostname === '') {
+                    throw new Error("Preview Environment Detected: Cannot fetch local JSON files in this sandbox.");
+                }
+
+                // 2. Fetch live data (This works perfectly on your live GitHub Pages site)
+                const requestPath = 'cot_data.json?v=' + new Date().getTime();
+                const response = await fetch(requestPath);
                 
+                if (!response.ok) throw new Error("HTTP Status " + response.status);
+                data = await response.json();
+                
+            } catch (error) {
+                console.warn("Using sample preview data. (You will see live data on your real GitHub URL).", error.message);
+                // 3. Fallback sample data so you can actually see the chart working in this preview window!
+                data = {
+                    last_updated: "Preview Sample Data (Live on GitHub)",
+                    dates: ["2026-06-16", "2026-06-23", "2026-06-30", "2026-07-07", "2026-07-14", "2026-07-21"],
+                    net_positions: [180000, 185000, 195000, 210000, 205000, 225000],
+                    longs: [255000, 260000, 270000, 285000, 280000, 295000],
+                    shorts: [75000, 75000, 75000, 75000, 75000, 70000],
+                    long_pct: [77.2, 77.6, 78.2, 79.1, 78.8, 80.8],
+                    short_pct: [22.8, 22.4, 21.8, 20.9, 21.2, 19.2]
+                };
+            }
+
+            try {
                 document.getElementById('last-updated').innerText = `LIVE • Updated: ${data.last_updated}`;
 
                 // Populate Top Ribbon
                 const lastIdx = data.net_positions.length - 1;
-                const prevIdx = lastIdx - 1;
+                const prevIdx = lastIdx - 1 > 0 ? lastIdx - 1 : 0;
                 
                 const currentNet = data.net_positions[lastIdx];
                 const weeklyChange = currentNet - data.net_positions[prevIdx];
@@ -134,7 +161,7 @@
                     }
                 });
             } catch (error) {
-                console.error("Error loading COT data:", error);
+                console.error("Error rendering COT data:", error);
                 document.getElementById('last-updated').innerText = "Error loading data - check console.";
                 document.getElementById('last-updated').classList.replace('text-green-400', 'text-red-500');
             }
