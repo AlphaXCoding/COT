@@ -1,38 +1,32 @@
 import pandas as pd
-import requests
 import json
+import subprocess
+import sys
 from datetime import datetime, timedelta
+
+# Auto-install official Nasdaq package to bypass the firewall
+try:
+    import nasdaqdatalink
+except ImportError:
+    print("Installing official Nasdaq Data Link library...")
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "nasdaq-data-link"])
+    import nasdaqdatalink
 
 # 1. IMPORTANT: Paste your real Nasdaq Data Link API key inside the quotes below
 API_KEY = 'yGgfHiAWbn4QmWXduWCP'
 
-# 2. FIXED URL
-URL = f"https://data.nasdaq.com/api/v3/datasets/CFTC/088691_F_L_ALL.json?api_key={API_KEY}"
-
-# 3. THE FIX: We add a fake "User-Agent" so the firewall thinks this is Google Chrome
-HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-}
-
 def fetch_and_update_data():
     try:
-        print("Connecting to Nasdaq Data Link...")
+        print("Connecting to Nasdaq Data Link via Official SDK...")
         
-        # We pass the HEADERS into our request here to bypass Incapsula
-        response = requests.get(URL, headers=HEADERS)
+        # Authenticate with the official SDK to bypass Incapsula WAF
+        nasdaqdatalink.ApiConfig.api_key = API_KEY
         
-        if response.status_code != 200:
-            print(f"API Error {response.status_code}: {response.text}")
-            exit(1)
-            
-        data = response.json()
+        # Fetch data directly into a pandas dataframe automatically!
+        df = nasdaqdatalink.get("CFTC/088691_F_L_ALL")
         
-        dataset = data['dataset']
-        columns = dataset['column_names']
-        rows = dataset['data']
-        
-        df = pd.DataFrame(rows, columns=columns)
-        df['Date'] = pd.to_datetime(df['Date'])
+        # The API returns Date as the index. Move it to a standard column.
+        df = df.reset_index()
         
         # Filter for the last 2 years
         two_years_ago = datetime.now() - timedelta(days=730)
