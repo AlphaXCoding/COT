@@ -6,15 +6,21 @@ from datetime import datetime, timedelta
 # 1. IMPORTANT: Paste your real Nasdaq Data Link API key inside the quotes below
 API_KEY = 'yGgfHiAWbn4QmWXduWCP'
 
-# 2. FIXED URL: Added the missing _L_ for the Legacy Gold Dataset
+# 2. FIXED URL
 URL = f"https://data.nasdaq.com/api/v3/datasets/CFTC/088691_F_L_ALL.json?api_key={API_KEY}"
+
+# 3. THE FIX: We add a fake "User-Agent" so the firewall thinks this is Google Chrome
+HEADERS = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+}
 
 def fetch_and_update_data():
     try:
         print("Connecting to Nasdaq Data Link...")
-        response = requests.get(URL)
         
-        # This will print the exact error in your GitHub logs if it fails again
+        # We pass the HEADERS into our request here to bypass Incapsula
+        response = requests.get(URL, headers=HEADERS)
+        
         if response.status_code != 200:
             print(f"API Error {response.status_code}: {response.text}")
             exit(1)
