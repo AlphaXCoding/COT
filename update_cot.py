@@ -36,13 +36,12 @@ def fetch_and_update_data():
         # Standardize columns to lowercase
         df.columns = [col.lower().strip().replace(' ', '_') for col in df.columns]
         
-        # DYNAMIC DATE FIX: Explicitly target the formatted date column, not the raw YYMMDD integer column
+        # DYNAMIC DATE FIX: Explicitly target the formatted date column
         date_col = next((col for col in df.columns if 'yyyy_mm_dd' in col or 'mm_dd_yyyy' in col), None)
         if not date_col:
             date_col = next((col for col in df.columns if 'date' in col), df.columns[1])
         
         # THE FIX: Filter strictly by the official CFTC Contract Market Code (088691)
-        # This prevents the script from accidentally adding Micro and E-Mini Gold contracts together
         code_col = next((col for col in df.columns if 'market_code' in col), None)
         
         if code_col:
@@ -65,7 +64,6 @@ def fetch_and_update_data():
 
         # Parse dates robustly
         if 'yymmdd' in date_col:
-            # Handle CFTC YYMMDD integer date format (e.g., 260721 -> 2026-07-21)
             date_str = df[date_col].astype(str).str.replace(r'\.0$', '', regex=True).str.zfill(6)
             df['Date'] = pd.to_datetime(date_str, format='%y%m%d', errors='coerce')
         else:
@@ -77,14 +75,13 @@ def fetch_and_update_data():
         df = df[(df['Date'] >= '2025-01-01') & (df['Date'] <= datetime.now())]
         
         if df.empty:
-            print("Error: DataFrame is empty after filtering dates. Check CFTC date formats.")
+            print("Error: DataFrame is empty after filtering dates.")
             exit(1)
 
         # Dynamically find Non-Commercial columns matching both legacy and newer CFTC formats
         long_col = next((col for col in df.columns if col.startswith('noncomm') and 'long' in col and 'all' in col), None)
         short_col = next((col for col in df.columns if col.startswith('noncomm') and 'short' in col and 'all' in col), None)
         
-        # Fallback just in case 'all' is missing from the column name
         if not long_col or not short_col:
             long_col = next((col for col in df.columns if col.startswith('noncomm') and 'long' in col and 'old' not in col), None)
             short_col = next((col for col in df.columns if col.startswith('noncomm') and 'short' in col and 'old' not in col), None)
@@ -101,8 +98,8 @@ def fetch_and_update_data():
             'Noncommercial Short': 'sum'
         }).reset_index()
         
-        # Keep the last 22 WEEKS (Weekly data - reverted back to normal)
-        df = df.sort_values(by='Date', ascending=True).tail(22)
+        # CHANGE: Keep only the last 9 WEEKS (approx 2 months)
+        df = df.sort_values(by='Date', ascending=True).tail(9)
         
         # Calculations
         df['Net_NonComm'] = df['Noncommercial Long'] - df['Noncommercial Short']
@@ -123,7 +120,7 @@ def fetch_and_update_data():
         with open('cot_data.json', 'w') as f:
             json.dump(export_data, f)
             
-        print("Cleaned 5-Month Gold COT data successfully exported!")
+        print("Cleaned 2-Month Gold COT data successfully exported!")
         
     except Exception as e:
         print(f"Error processing script: {e}")
